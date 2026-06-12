@@ -2,8 +2,8 @@
 """
 AI Image Generation with Automatic Prompt Enhancement (via OpenRouter)
 
-Uses the OpenRouter API (model: google/gemini-3.1-flash-image-preview,
-a.k.a. Nano Banana 2) to generate high-quality images. Simple prompts are
+Uses the OpenRouter API to generate high-quality images. Default model:
+openai/gpt-5.4-image-2 (selectable via --model). Simple prompts are
 automatically enhanced by an AI art director for professional results.
 
 Usage:
@@ -32,8 +32,20 @@ load_dotenv(_script_dir / ".env")
 import os  # noqa: E402  (after load_dotenv so .env values are visible)
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
-IMAGE_MODEL = "google/gemini-3.1-flash-image-preview"
 ENHANCE_MODEL = "google/gemini-2.5-flash"
+
+# aliasy modeli obrazkowych (przyjmowany jest też pełny slug OpenRouter)
+MODEL_ALIASES = {
+    "nb2":      "google/gemini-3.1-flash-image-preview",  # Nano Banana 2
+    "flash":    "google/gemini-3.1-flash-image-preview",
+    "nbp":      "google/gemini-3-pro-image-preview",      # Nano Banana Pro
+    "pro":      "google/gemini-3-pro-image-preview",
+    "nb1":      "google/gemini-2.5-flash-image",          # Nano Banana 1
+    "gpt":      "openai/gpt-5.4-image-2",
+    "gpt54":    "openai/gpt-5.4-image-2",
+    "gpt-mini": "openai/gpt-5-image-mini",
+}
+DEFAULT_MODEL = "gpt54"
 
 DEFAULT_RESOLUTION = "2K"
 DEFAULT_ASPECT_RATIO = "16:9"
@@ -48,7 +60,7 @@ MIME_TO_EXT = {
 
 def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate images via OpenRouter (Gemini 3.1 Flash Image / Nano Banana 2)"
+        description="Generate images via OpenRouter (default model: GPT-5.4 Image 2)"
     )
     parser.add_argument("prompt", type=str, help="Image generation prompt")
     parser.add_argument(
@@ -71,6 +83,11 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--raw", action="store_true", default=False,
         help="Skip prompt enhancement — use the prompt as-is"
+    )
+    parser.add_argument(
+        "--model", type=str, default=DEFAULT_MODEL,
+        help="Image model: alias (%s) or full OpenRouter slug (default: %s)"
+             % (", ".join(sorted(set(MODEL_ALIASES))), DEFAULT_MODEL)
     )
     return parser.parse_args(args)
 
@@ -170,7 +187,8 @@ def generate_image(
     aspect_ratio: str,
     output_dir: str,
     reference_images: list[str] | None = None,
-    raw: bool = False
+    raw: bool = False,
+    model: str = DEFAULT_MODEL,
 ) -> str | None:
     """
     Generate an image via OpenRouter.
@@ -193,6 +211,8 @@ def generate_image(
                 return None
 
     api_key = get_api_key()
+    image_model = MODEL_ALIASES.get(model, model)
+    print(f"[Model] {image_model}")
 
     # Enhance prompt unless raw mode or reference images (editing mode)
     if not raw and not reference_images:
@@ -204,15 +224,27 @@ def generate_image(
     else:
         content = prompt
 
-    data = post({
-        "model": IMAGE_MODEL,
+    payload = {
+        "model": image_model,
         "messages": [{"role": "user", "content": content}],
         "modalities": ["image", "text"],
         "image_config": {
             "aspect_ratio": aspect_ratio,
             "image_size": resolution,
         },
-    }, api_key)
+    }
+    try:
+        data = post(payload, api_key)
+    except RuntimeError as e:
+        # niektóre modele nie znają image_config — ponów z formatem opisanym w prompcie
+        print(f"[Fallback] image_config rejected ({e}); retrying without it")
+        payload.pop("image_config", None)
+        if not reference_images:
+            payload["messages"] = [{
+                "role": "user",
+                "content": f"{prompt}\n\nOutput format: {aspect_ratio} aspect ratio.",
+            }]
+        data = post(payload, api_key)
 
     message = data["choices"][0]["message"]
     text = (message.get("content") or "").strip()
@@ -243,7 +275,8 @@ def main():
             aspect_ratio=args.aspect,
             output_dir=args.output,
             reference_images=args.reference if args.reference else None,
-            raw=args.raw
+            raw=args.raw,
+            model=args.model,
         )
         if result is None:
             sys.exit(1)
