@@ -1,60 +1,75 @@
 # skill-imagegen
 
-Claude Code skill for AI image generation with automatic prompt enhancement.
+Claude Code skill for AI image generation: logos, infographics, illustrations, photorealistic shots and thumbnails, with built-in control over photo composition.
 
-Write a simple prompt like "a cat on a roof" and the built-in AI art director rewrites it into a cinematic, detailed description before generating the image. Powered by Gemini 3.1 Flash Image.
+- **Default:** `codex exec` (OpenAI Codex CLI with its built-in image generator). No API key, just a logged-in Codex CLI. Reference images work natively.
+- **Fallback, on explicit request:** OpenRouter API through `generate_image.py`, with a selectable model and automatic prompt enhancement by an AI art director.
+- **Composition control:** a tested recipe for rule of thirds, negative space for headlines, leading lines, vanishing point, symmetry, frame in a frame and golden spiral. Two helper scripts draw a composition card to use as a reference and overlay a thirds grid for QA.
 
 ## Install
 
 ```bash
-claude install-skill https://github.com/clone147/skill-imagegen
+git clone https://github.com/clone147/skill-imagegen.git
+cd skill-imagegen
+
+# the skill itself
+cp -r .claude/skills/imagegen ~/.claude/skills/
+
+# Python for the fallback path and the helper scripts
+python3 -m venv venv
+venv/bin/pip install -r requirements.txt
+
+# tell the skill where the code lives (add to ~/.zshrc or ~/.bashrc)
+export CCSKILL_IMAGEGEN_DIR="$(pwd)"
 ```
 
-Then set your API key:
+For the default path install and log in to the [Codex CLI](https://github.com/openai/codex).
+
+For the OpenRouter fallback set your key in the environment or in `.env` next to `generate_image.py` (see `.env.example`):
 
 ```bash
-export GEMINI_API_KEY="your-key-from-ai.google.dev"
+export OPENROUTER_API_KEY="your-key-from-openrouter.ai/keys"
 ```
 
-## How prompt enhancement works
+`.env` is in `.gitignore`. Never commit it.
 
-Your simple prompt goes through a two-step pipeline:
+## Composition helpers
 
-1. **Gemini 2.5 Flash** rewrites your prompt into a professional art direction — adding composition, lighting, camera angle, textures, mood, and color palette
-2. **Gemini 3.1 Flash Image** generates the image from the enhanced prompt
+```bash
+# draw a composition card (here: subject in the lower-right third, empty left side, low horizon)
+python3 ~/.claude/skills/imagegen/scripts/karta_kompozycji.py trojpodzial --punkt prawy-dol --pusta lewa --horyzont dol -o /tmp/karta.png
 
-Use `--raw` to skip enhancement and send your prompt directly.
+# overlay a rule-of-thirds grid on generated images for review
+python3 ~/.claude/skills/imagegen/scripts/siatka.py result.png -o /tmp/siatka.jpg
+```
 
-## Examples
+The card goes to the model as a reference image, together with the geometry written out in the prompt. The grid lets you check whether the model actually placed the subject where you asked.
 
-| You write | AI art director sends |
-|---|---|
-| `"a cat on a roof"` | A ginger tabby cat perched on weathered terracotta roof tiles, golden hour backlighting casting warm amber highlights through translucent ear tips... |
-| `"modern office"` | A minimalist open-plan office space with floor-to-ceiling windows, soft diffused northern light streaming across polished concrete floors... |
-| `"coffee shop logo"` | A hand-lettered coffee shop emblem featuring an artisan coffee cup with rising steam forming elegant swirls... |
-
-## CLI options
+## OpenRouter fallback
 
 ```
-python generate_image.py "prompt" [options]
+venv/bin/python generate_image.py "prompt" [options]
 
+--model        alias or full OpenRouter slug (default: gpt54)
 --resolution   1K, 2K, 4K (default: 2K)
---aspect       Aspect ratio (default: 16:9) — supports 1:1, 4:3, 9:16, etc.
---output       Output directory (default: ./generated_images)
---reference    Reference image for editing (up to 14, repeatable)
---raw          Skip prompt enhancement
+--aspect       aspect ratio (default: 16:9), e.g. 1:1, 4:3, 9:16
+--output       output directory (default: ./generated_images)
+--reference    reference image, repeatable (up to 14)
+--raw          skip prompt enhancement
 ```
 
-## Reference image editing
+| Alias | OpenRouter model |
+| --- | --- |
+| `gpt`, `gpt54` (default) | `openai/gpt-5.4-image-2` |
+| `nbp`, `pro` | `google/gemini-3-pro-image-preview` (Nano Banana Pro) |
+| `nb2`, `flash` | `google/gemini-3.1-flash-image-preview` (Nano Banana 2) |
+| `gpt-mini` | `openai/gpt-5-image-mini` |
+| `nb1` | `google/gemini-2.5-flash-image` |
 
-```bash
-# Change background
-python generate_image.py "change background to sunset" --reference photo.png
+Models without `image_config` support fall back automatically: the aspect ratio is appended to the prompt text.
 
-# Style transfer with multiple references
-python generate_image.py "apply this art style" --reference content.png --reference style.png
-```
+Prompt enhancement sends your short prompt to `google/gemini-2.5-flash` first. It adds composition, lighting, camera angle, textures and mood, then the image model renders the result. Use `--raw` when your prompt is already final.
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
+MIT, see [LICENSE](LICENSE)
