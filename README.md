@@ -1,9 +1,12 @@
 # skill-imagegen
 
-Claude Code skill for AI image generation: logos, infographics, illustrations, photorealistic shots and thumbnails, with built-in control over photo composition.
+Claude Code skill for AI image generation **and logo design**: infographics, illustrations, photorealistic shots and thumbnails with built-in control over photo composition, plus a full logo workflow that ends in real SVG files, not raster pictures of logos.
+
+It runs on your **OpenAI subscription first**: by default every image goes through `codex exec` (the Codex CLI you're already logged into, billed to your ChatGPT/OpenAI plan), so you don't need an API key or pay per image. OpenRouter is only a fallback you ask for explicitly.
 
 - **Default:** `codex exec` (OpenAI Codex CLI with its built-in image generator). No API key, just a logged-in Codex CLI. Reference images work natively.
 - **Fallback, on explicit request:** OpenRouter API through `generate_image.py`, with a selectable model and automatic prompt enhancement by an AI art director.
+- **Logo design:** an identity-designer workflow (brief, category clichés, 8–12 one-line concepts, hand-built SVG, tests at 16 px / one colour / reversed / shelf test, concept sheet, then the kit: variants, favicon and app icons, presentation board, guidelines). Bundles a searchable library of 1,400+ classified real-world SVG logos and dependency-free Python scripts. Image models are used only for sketches and mockups; the mark itself is vector.
 - **Composition control:** a tested recipe for rule of thirds, negative space for headlines, leading lines, vanishing point, symmetry, frame in a frame and golden spiral. Two helper scripts draw a composition card to use as a reference and overlay a thirds grid for QA.
 
 ## Install
@@ -44,6 +47,22 @@ python3 ~/.claude/skills/imagegen/scripts/siatka.py result.png -o /tmp/siatka.jp
 ```
 
 The card goes to the model as a reference image, together with the geometry written out in the prompt. The grid lets you check whether the model actually placed the subject where you asked.
+
+## Logo design
+
+The `logo/` module inside the skill is based on [kaankiziltug/logo-design-skill](https://github.com/kaankiziltug/logo-design-skill) (MIT, see `logo/LICENSE` and `logo/SOURCE.txt`), picked as the best-reviewed logo skill of the past year. Start with `logo/WORKFLOW.md`. The main scripts:
+
+```bash
+LG=~/.claude/skills/imagegen/logo
+python3 $LG/scripts/search_library.py --industry fintech --summary   # what the category looks like
+python3 $LG/scripts/svg_audit.py concept-a.svg                       # live text, colours, angles, tiny details
+python3 $LG/scripts/render_png.py concept-a.svg --out-dir renders    # look at your work
+python3 $LG/scripts/preview_sheet.py concept-a.svg -o preview.html   # 16/32 px, one colour, reversed, shelf test
+python3 $LG/scripts/concept_sheet.py a.svg b.svg c.svg --greyscale -o concepts.png
+python3 $LG/scripts/export_variants.py final.svg --web-icons         # favicon.ico, PNG icons, webmanifest
+```
+
+Library logos are trademarks of their owners and are there for study only (`logo/TRADEMARKS.md`).
 
 ## OpenRouter fallback
 

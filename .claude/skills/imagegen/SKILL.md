@@ -10,6 +10,12 @@ description: |
   headlines, leading lines, vanishing point, symmetry, frame in a frame, golden
   spiral): geometry-in-prompt recipe + composition-card sketches as reference +
   thirds-grid QA. Use for thumbnails and any image where framing matters.
+  LOGO DESIGN: full identity-designer workflow (brief → clichés → 8–12 concepts →
+  hand-built SVG → audit/16px/one-colour/shelf tests → concept sheet checkpoint →
+  kit: variants, favicon/app icons, presentation board, guidelines) with a
+  searchable library of 1,400+ real SVG logos — module `logo/` (from
+  kaankiziltug/logo-design-skill, MIT). Use for logo, logotype, wordmark,
+  monogram, brand mark, app icon, favicon, logo critique or redesign.
   Formerly known as nano-banana-pro.
 ---
 
@@ -99,6 +105,50 @@ na `codex exec` (2 sceny × warianty, ocena z siatką trójpodziału). Wnioski:
 | Równowaga asymetryczna (balanced) | dwa obiekty różnej wielkości | „large element on the left third, small counterweight element on the right third, lower” | `trojpodzial` (2 znaczniki opisz słownie) |
 | Kontrast / zestawienie (juxtaposition) | dwa światy w kadrze (morze/piasek, stare/nowe) | „the frame is split diagonally from top-right to bottom-left: <A> on one side, <B> on the other” | słownie |
 | Powtarzalność (repetition) | okna, rzędy, sprzęt w szeregu | „a grid of 6 identical arched windows filling the frame, evenly spaced” | słownie |
+
+## Logo i identyfikacja (moduł `logo/`, dodany 2026-10-15)
+
+Źródło: research `/last30days` (365 dni) — najlepiej oceniany skill do logo w ostatnim roku to
+**kaankiziltug/logo-design-skill** (r/ClaudeAI 387 pkt, r/BestGitHubRepos 327 pkt, recenzje na X: „renders its own
+draft SVGs and tests them… then stops” ). Skopiowany w całości do `~/.claude/skills/imagegen/logo/` (MIT,
+`logo/LICENSE`, `logo/SOURCE.txt`). Pełna instrukcja: **`logo/WORKFLOW.md` — przeczytaj ją przed projektowaniem logo.**
+
+**Zasada nr 1: logo to plik wektorowy, nie obrazek z generatora.** Model rastrowy (codex/Nano Banana) wymyśla
+napisy, robi gradienty i cienie, nie daje SVG i nie przejdzie testu 16 px. Rola `codex exec` przy logo:
+moodboard i szybkie szkice pomysłów (czarne na białym), oraz mockupy na końcu (szyld, kubek, koszulka z gotowym
+znakiem jako referencją). Sam znak budujesz w SVG kodem i testujesz skryptami.
+
+Skrypty (czysty Python 3, bez zależności; render przez Chrome/qlmanage — sprawdź `render_png.py --which`):
+```bash
+LG=~/.claude/skills/imagegen/logo
+python3 $LG/scripts/search_library.py --industry <branża> --summary        # jak wygląda kategoria (nie powielaj)
+python3 $LG/scripts/search_library.py --subject <motyw> --format paths     # czy taki znak już istnieje
+python3 $LG/scripts/svg_audit.py a.svg b.svg c.svg                         # live text, kolory, kąty, drobne detale
+python3 $LG/scripts/render_png.py a.svg b.svg --out-dir renders --size 512 # POTEM obejrzyj PNG przez Read
+python3 $LG/scripts/preview_sheet.py a.svg b.svg c.svg -o preview.html     # 16/32 px, jeden kolor, rewers, mirror, shelf test
+python3 $LG/scripts/concept_sheet.py a.svg b.svg c.svg --lockups a-l.svg b-l.svg c-l.svg \
+    --names A B C --notes "…" "…" "…" --recommend 1 --greyscale -o concepts.png
+python3 $LG/scripts/export_variants.py final.svg --title "Marka" --mono "#HEX" --icon-bg "#HEX" --web-icons
+python3 $LG/scripts/presentation_board.py spec.json -o board.html --png-dir slides   # wzór: $LG/templates/
+```
+
+Przepis skrócony (szczegóły w `logo/WORKFLOW.md` i `logo/references/*.md`):
+1. **Brief**: nazwa (dokładna pisownia), co robią, dla kogo, 3–5 przymiotników, konkurencja, ograniczenia
+   (istniejące kolory marki!). Braki → załóż i wypisz założenia, nie zasypuj pytaniami.
+2. **Klisze kategorii wypisz jawnie** i traktuj jako zakazane bez świeżej formy (taniec: sylwetka tancerki,
+   nuty, buty na obcasie, serce z nutą). **Mapa słów** → przecięcia znaczeń.
+3. **8–12 koncepcji po jednym zdaniu**, różne typy znaków (`references/mark-types.md`); wybierz 3 najmocniejsze
+   i najbardziej różne. Opcjonalnie: szkice rastrowe przez codex („flat black vector logo sketch on white, no text,
+   no gradient”) tylko do wyboru kierunku.
+4. **SVG najpierw czarne**, `viewBox="0 0 256 256"`, prymitywy + łuki, kąty 0/15/30/45/60/90°, stała grubość,
+   prawdziwe dziury (`fill-rule="evenodd"`), **bez `<text>` w finalu** (litery jako ścieżki). Zapisuj wersje v1, v2…
+5. **Testy w pętli ≥2×**: audyt → render → obejrzyj → popraw. Craft pass: czy litera nadal czyta się jako litera,
+   czyste styki, peer test obok 3–4 wzorowych znaków z biblioteki, czy nie jest zbyt dosłowne.
+6. **Checkpoint**: pokaż arkusz koncepcji (greyscale), 1 linia na koncepcję + rekomendacja, zaproponuj kit
+   i czekaj. Kit (kolory, lockupy, wersja na małe rozmiary, favicon/app icon, board z mockupami, guideline)
+   dopiero po wyborze — chyba że user wprost każe zrobić wszystko bez pytania.
+7. Uczciwość: brak gwarancji znaku towarowego (zalecić wyszukiwanie), licencje fontów, nie twierdź, że testy
+   przeszły, jeśli ich nie uruchomiłeś. Biblioteka = znaki towarowe właścicieli, tylko do nauki, nigdy do kalki.
 
 ## FALLBACK: OpenRouter API (only on explicit request)
 
